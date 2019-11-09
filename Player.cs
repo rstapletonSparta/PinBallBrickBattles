@@ -21,8 +21,25 @@ namespace PinBallBattles
             this.radius = radius;
         }
 
+        public Vector2 PlayerToPLayerNormal(GameTime gameTime, float dis, Player other)
+        {
+            Vector2 pushDir = new Vector2();
+
+            pushDir.X = VectorDirection(other).X / dis;
+            pushDir.Y = VectorDirection(other).Y / dis;
+            
+            return pushDir;
+        }
+
+        public Vector2 VectorDirection(Player other)
+        {
+            return other.position - position;
+        }
+
         public void createCircleText(GraphicsDevice graphics)
         {
+            // this guy has got radius and diamiter backwards
+
             texture = new Texture2D(graphics, radius, radius);
             Color[] colorData = new Color[radius * radius];
 

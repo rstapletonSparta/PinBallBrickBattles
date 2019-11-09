@@ -13,6 +13,8 @@ namespace PinBallBattles
         Player[] players = new Player[2];
 
         float sideSpeed = 150;
+        float normalRepel = 900;
+        float dashRepel = 150;
 
         public Game1()
         {
@@ -33,13 +35,13 @@ namespace PinBallBattles
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            Vector2 p1Pos = new Vector2(300, 400);
-            Player p1 = new Player(p1Pos, 60);
+            Vector2 p0Pos = new Vector2(200, 400);
+            Player p1 = new Player(p0Pos, 60);
             p1.createCircleText(GraphicsDevice);
             players[0] = p1;
 
-            Vector2 p2Pos = new Vector2(100, 400);
-            Player p2 = new Player(p2Pos, 60);
+            Vector2 p1Pos = new Vector2(400, 400);
+            Player p2 = new Player(p1Pos, 60);
             p2.createCircleText(GraphicsDevice);
             players[1] = p2;
         }
@@ -51,53 +53,95 @@ namespace PinBallBattles
 
         protected override void Update(GameTime gameTime)
         {
-            InputUpdate(gameTime);
-            bool playerToPlayerCollision = PlayerToPlayerCollision();
-            if (playerToPlayerCollision)
-            {
-                Console.WriteLine("Hello");
-            }
+            // GAME LOOP happens 1 per frame
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed 
+                || Keyboard.GetState().IsKeyDown(Keys.Escape))
+                Exit();
+
+            PlayerMovement(gameTime);
+
             base.Update(gameTime);
         }
 
-        private bool PlayerToPlayerCollision()
+        /// <summary>
+        /// 
+        ///         PLAYER MOVEMENT
+        /// 
+        /// </summary>
+        /// <param name="gameTime"></param>
+
+        private void PlayerMovement(GameTime gameTime)
         {
-            float distX = players[0].Position.X - players[1].Position.X;
-            float distY = players[0].Position.Y - players[1].Position.Y;
-            double distance = Math.Sqrt((distX * distX) + (distY * distY));
-            
-            // if the distance is less than the sum of the circle's
-            // radii, the circles are touching!
-            Console.WriteLine(distance);
-            if (distance <= players[0].Radius)
+            // should handle both player movement here as they
+            // interact with each other
+            Vector2 movePlayerZero = new Vector2();
+            Vector2 movePlayerOne = new Vector2();
+
+            movePlayerOne += PlayerInputUpdate(gameTime);
+
+            float playerToPlayerDistance = PlayerToPlayerDistance();
+            bool playerToPlayerCollision = PlayerToPlayerCollision
+                (playerToPlayerDistance);
+
+
+            Vector2 playerZeroNormal = players[0].PlayerToPLayerNormal
+                (gameTime, playerToPlayerDistance, players[1]);
+            Vector2 playerOneNormal = players[1].PlayerToPLayerNormal
+                (gameTime, playerToPlayerDistance, players[0]);
+
+            if (playerToPlayerCollision)
+            {
+                movePlayerZero -= playerZeroNormal * normalRepel
+                    * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                movePlayerOne -= playerOneNormal * normalRepel
+                    * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
+            players[0].Position += movePlayerZero;
+            players[1].Position += movePlayerOne;
+
+
+        }
+
+        private bool PlayerToPlayerCollision(double dis)
+        {
+            if (dis <= players[0].Radius)
             {
                 return true;
             }
             return false;
         }
 
-        private void InputUpdate(GameTime gameTime)
+        public float PlayerToPlayerDistance()
+        {
+            float distX = players[1].Position.X - players[0].Position.X;
+            float distY = players[1].Position.Y - players[0].Position.Y;
+
+            float distance = (float)Math.Sqrt((distX * distX) + (distY * distY));
+
+            return distance;
+        }
+
+        private Vector2 PlayerInputUpdate(GameTime gameTime)
         {
             var keyboard = Keyboard.GetState();
+            Vector2 inputPos = new Vector2(); 
 
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || keyboard.IsKeyDown(Keys.Escape))
-                Exit();
-
-            Vector2 player1Pos = new Vector2(); 
             if (keyboard.IsKeyDown(Keys.A))
             {
-                player1Pos.X -= sideSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                inputPos.X -= sideSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
             if (keyboard.IsKeyDown(Keys.D))
             {
-                player1Pos.X += sideSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                inputPos.X += sideSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
-            players[0].Position += player1Pos;
 
             if (keyboard.IsKeyDown(Keys.Space))
             {
-
+                // this will be for boost
             }
+
+            return inputPos;
         }
 
         protected override void Draw(GameTime gameTime)
@@ -108,8 +152,8 @@ namespace PinBallBattles
 
             foreach(Player p in players)
             {
-                spriteBatch.Draw(p.Texture,p.Position, null, Color.Blue,
-                    0f, Vector2.Zero,//new Vector2(map.LoadedChunks.Texture.Width / 2, map.LoadedChunks.Texture.Height / 2),
+                spriteBatch.Draw(p.Texture,p.Position, null, Color.AntiqueWhite, 0f, 
+                    new Vector2(p.Texture.Width / 2, p.Texture.Height / 2),
                     Vector2.One, SpriteEffects.None, 0f);
             }
             spriteBatch.End();
