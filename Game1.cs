@@ -18,8 +18,8 @@ namespace PinBallBattles
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
 
-            graphics.PreferredBackBufferWidth = 600;
-            graphics.PreferredBackBufferHeight = 900;
+            graphics.PreferredBackBufferWidth = 1500;
+            graphics.PreferredBackBufferHeight = 600;
         }
 
         protected override void Initialize()
@@ -32,7 +32,7 @@ namespace PinBallBattles
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            Vector2 p0Pos = new Vector2(200, 402);
+            Vector2 p0Pos = new Vector2(200, 400);
             Player p1 = new Player(p0Pos, 60, true);
             p1.createCircleText(GraphicsDevice);
             players[0] = p1;
@@ -61,13 +61,6 @@ namespace PinBallBattles
 
             base.Update(gameTime);
         }
-
-        /// <summary>
-        /// 
-        ///         PLAYER MOVEMENT
-        /// 
-        /// </summary>
-        /// <param name="gameTime"></param>
         
         private void MovePlayers(GameTime gameTime)
         {
@@ -75,9 +68,9 @@ namespace PinBallBattles
             bool playerToPlayerCollision = PlayerToPlayerCollision
                 (playerToPlayerDistance);
             
-            Vector2 movePlayerZero = players[0].PlayerMovement
+            Vector2 movePlayerZero = players[0].PlayerMovementController
                 (gameTime, playerToPlayerDistance, playerToPlayerCollision, players[1]);
-            Vector2 movePlayerOne = players[1].PlayerMovement
+            Vector2 movePlayerOne = players[1].PlayerMovementController
                 (gameTime, playerToPlayerDistance, playerToPlayerCollision, players[0]);
 
             players[0].Position += movePlayerZero;
