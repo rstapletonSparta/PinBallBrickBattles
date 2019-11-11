@@ -11,15 +11,15 @@ namespace PinBallBattles
         SpriteBatch spriteBatch;
 
         Player[] players = new Player[2];
+        Brick[] bricks = new Brick[2];
         
-
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
 
             graphics.PreferredBackBufferWidth = 1500;
-            graphics.PreferredBackBufferHeight = 600;
+            graphics.PreferredBackBufferHeight = 900;
         }
 
         protected override void Initialize()
@@ -32,7 +32,7 @@ namespace PinBallBattles
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            Vector2 p0Pos = new Vector2(200, 400);
+            Vector2 p0Pos = new Vector2(200, 410);
             Player p1 = new Player(p0Pos, 60, true);
             p1.createCircleText(GraphicsDevice);
             players[0] = p1;
@@ -41,8 +41,18 @@ namespace PinBallBattles
             Player p2 = new Player(p1Pos, 60, false);
             p2.createCircleText(GraphicsDevice);
             players[1] = p2;
+
+            Vector2 brick1Pos = new Vector2(15, 450);
+            Brick b1 = new Brick(brick1Pos, 30, 900);
+            b1.CreateSquareText(GraphicsDevice);
+            bricks[0] = b1;
+
+            Vector2 brickpos = new Vector2(585, 450);
+            Brick b = new Brick(brickpos, 30, 900);
+            b.CreateSquareText(GraphicsDevice);
+            bricks[1] = b;
         }
-        
+
         protected override void UnloadContent()
         {
             // TODO: Unload any non ContentManager content here
@@ -61,35 +71,90 @@ namespace PinBallBattles
 
             base.Update(gameTime);
         }
-        
+        bool wallCol;
         private void MovePlayers(GameTime gameTime)
         {
-            float playerToPlayerDistance = PlayerToPlayerDistance();
+            float playerToPlayerDistance = ToPlayerDistance(players[0], players[1].Position);
             bool playerToPlayerCollision = PlayerToPlayerCollision
-                (playerToPlayerDistance);
-            
-            Vector2 movePlayerZero = players[0].PlayerMovementController
-                (gameTime, playerToPlayerDistance, playerToPlayerCollision, players[1]);
-            Vector2 movePlayerOne = players[1].PlayerMovementController
-                (gameTime, playerToPlayerDistance, playerToPlayerCollision, players[0]);
+                (playerToPlayerDistance, players[0]);
 
-            players[0].Position += movePlayerZero;
-            players[1].Position += movePlayerOne;
+            if (playerToPlayerCollision)
+            {
+                CollisionStateChange(playerToPlayerDistance);
+            }
+
+            foreach(Player p in players)
+            {
+                Player other;
+                if (p != players[0])
+                    other = players[0];
+                else
+                    other = players[1];
+
+                foreach(Brick b in bricks)
+                {
+                    Vector2 t = b.ClosestEdge(p);
+                    float dis = ToPlayerDistance(p, t);
+                    wallCol = PlayerToPlayerCollision(dis, p);
+                }
+                Console.WriteLine(wallCol);
+
+                Vector2 movePlayer = p.PlayerMovementController
+                    (gameTime, playerToPlayerDistance, playerToPlayerCollision, other, graphics);
+                if (!wallCol)
+                {
+                    p.Position += movePlayer;
+
+                }
+            }
         }
 
-        private bool PlayerToPlayerCollision(double dis)
+        private void CollisionStateChange(float playDistance)
         {
-            if (dis <= players[0].Radius)
+            if (players[0].MoveState == MovementStates.Dash
+                && players[1].MoveState == MovementStates.Dash)
+            {
+                players[0].MoveState = MovementStates.ShortKnockBack;
+                players[1].MoveState = MovementStates.ShortKnockBack;
+                players[0].SetKnockbackDirection(playDistance, players[1]);
+                players[1].SetKnockbackDirection(playDistance, players[0]);
+            }
+            else if (players[0].MoveState == MovementStates.Dash
+                && players[1].MoveState == MovementStates.Normal)
+            {
+                players[0].MoveState = MovementStates.ShortKnockBack;
+                players[1].MoveState = MovementStates.LongKnockBack;
+                players[0].SetKnockbackDirection(playDistance, players[1]);
+                players[1].SetKnockbackDirection(playDistance, players[0]);
+            }
+            else if (players[0].MoveState == MovementStates.Normal
+                && players[1].MoveState == MovementStates.Dash)
+            {
+                players[0].MoveState = MovementStates.LongKnockBack;
+                players[1].MoveState = MovementStates.ShortKnockBack;
+                players[0].SetKnockbackDirection(playDistance, players[1]);
+                players[1].SetKnockbackDirection(playDistance, players[0]);
+            }
+            else
+            {
+                players[0].MoveState = MovementStates.Normal;
+                players[1].MoveState = MovementStates.Normal;
+            }
+        }
+
+        private bool PlayerToPlayerCollision(double dis, Player player)
+        {
+            if (dis <= player.Radius / 2)
             {
                 return true;
             }
             return false;
         }
 
-        public float PlayerToPlayerDistance()
+        private float ToPlayerDistance(Player player, Vector2 test)
         {
-            float distX = players[1].Position.X - players[0].Position.X;
-            float distY = players[1].Position.Y - players[0].Position.Y;
+            float distX = player.Position.X - test.X;
+            float distY = player.Position.Y - test.Y;
 
             float distance = (float)Math.Sqrt((distX * distX) + (distY * distY));
 
@@ -108,6 +173,14 @@ namespace PinBallBattles
                     new Vector2(p.Texture.Width / 2, p.Texture.Height / 2),
                     Vector2.One, SpriteEffects.None, 0f);
             }
+
+            foreach (Brick b in bricks)
+            {
+                spriteBatch.Draw(b.Texture, b.Position, null, Color.AntiqueWhite, 0f,
+                        new Vector2(b.Texture.Width / 2, b.Texture.Height / 2),
+                        Vector2.One, SpriteEffects.None, 0f);
+            }
+
             spriteBatch.End();
 
             base.Draw(gameTime);

@@ -22,8 +22,12 @@ namespace PinBallBattles
         private float sideSpeed = 150;
         private float dashSpeed = 1500;
         private float normalRepel = 900;
-        private int knockBackDuration = 500;
+        private float longRepel = 1300;
+        private float shortRepel = 1300;
+        private int longKnockBack = 500;
+        private int shortKnockBack = 200;
         private double cooldowntime = 0;
+        private Vector2 KnockbackDir;
         
         public Texture2D Texture { get => texture; }
         public Vector2 Position { get => position; set => position = value; }
@@ -38,56 +42,65 @@ namespace PinBallBattles
         }
 
         public Vector2 PlayerMovementController
-            (GameTime gameTime, float playersDistance, bool playersCollision, Player other)
+            (GameTime gameTime, float playersDistance, bool playersCollision, Player other, GraphicsDeviceManager graphics)
         {
             Vector2 movePos = new Vector2();
             Vector2 normal = PlayerToPLayerNormal
-                (gameTime, playersDistance, other);
-            
-            
-            if (playersCollision)
+                (playersDistance, other);
+
+            switch (moveState)
             {
-                moveState = CollisionStateChange(other);
-                //if (moveState == MovementStates.Normal)
-                //{
-                //    movePos -= normal * normalRepel;
-                //}
+                case MovementStates.Normal:
+                    movePos += PlayerInputUpdate(sideSpeed);
+                    if (playersCollision)
+                    {
+                        movePos -= normal * normalRepel;
+                    }
+                break;
+                case MovementStates.Dash:
+                    movePos += PlayerInputUpdate(dashSpeed);
+                break;
+                case MovementStates.LongKnockBack:
+                    movePos -= normal * longRepel;
+                    if (CooldownTimer(gameTime, longKnockBack))
+                    {
+                        moveState = MovementStates.Normal;
+                        cooldowntime = 0;
+                    }
+                break;
+                case MovementStates.ShortKnockBack:
+                    movePos -= normal * shortRepel;
+                    if (CooldownTimer(gameTime, shortKnockBack))
+                    {
+                        moveState = MovementStates.Normal;
+                        cooldowntime = 0;
+                    }
+                break;
             }
 
-            if (moveState == MovementStates.Normal)
-            {
-                movePos += PlayerInputUpdate(gameTime, sideSpeed);
-            }
-            else if (moveState == MovementStates.Dash)
-            {
-                movePos += PlayerInputUpdate(gameTime, dashSpeed);
-            }
-            else if (moveState == MovementStates.LongKnockBack)
-            {
-                // need something that will save collision direction
-                // instead of normal
-                movePos -= normal * normalRepel;
-
-                if (!CooldownTimer(gameTime, knockBackDuration))
-                {
-                    moveState = MovementStates.Normal;
-                }
-            }
-            else if (moveState == MovementStates.ShortKnockBack)
-            {
-                movePos -= normal * 200;
-                
-                if (!CooldownTimer(gameTime, 50))
-                {
-                    moveState = MovementStates.Normal;
-                }
-            }
-            Console.WriteLine(moveState);
+            //Console.WriteLine(moveState);
             
             return movePos * (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
+
+        public void ObjectCollision()
+        {
+
+        }
+
+
+
+
+
+
+
+        public void SetKnockbackDirection(float playersDistance, Player other)
+        {
+            KnockbackDir = PlayerToPLayerNormal
+                (playersDistance, other);
+        }
         
-        private Vector2 PlayerInputUpdate(GameTime gameTime, float speed)
+        private Vector2 PlayerInputUpdate(float speed)
         {
             Vector2 inputPos = new Vector2();
 
@@ -116,33 +129,11 @@ namespace PinBallBattles
 
             return inputPos;
         }
-
-        public MovementStates CollisionStateChange(Player other)
-        {
-            if (moveState == MovementStates.Dash
-                && other.moveState == MovementStates.Dash)
-            {
-                return MovementStates.ShortKnockBack;
-            }
-            else if (moveState == MovementStates.Dash
-                && other.moveState == MovementStates.Normal)
-            {
-                return MovementStates.ShortKnockBack;
-            }
-            else if (moveState == MovementStates.Normal
-                && other.moveState == MovementStates.Dash)
-            {
-                return MovementStates.LongKnockBack;
-            }
-            else
-            {
-                return MovementStates.Normal;
-            }
-        }
-
+        
         public bool CooldownTimer(GameTime gameTime, double duration)
         {
             cooldowntime += gameTime.ElapsedGameTime.TotalMilliseconds;
+            //Console.WriteLine(cooldowntime);
             if (cooldowntime >= duration)
             {
                 return true;
@@ -153,12 +144,11 @@ namespace PinBallBattles
             }
         }
 
-        public Vector2 PlayerToPLayerNormal(GameTime gameTime, float dis, Player other)
+        public Vector2 PlayerToPLayerNormal(float dis, Player other)
         {
             Vector2 pushDir = new Vector2();
 
-            pushDir.X = VectorDirection(other).X / dis;
-            pushDir.Y = VectorDirection(other).Y / dis;
+            pushDir = VectorDirection(other) / dis;
             
             return pushDir;
         }
