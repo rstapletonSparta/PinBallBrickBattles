@@ -15,24 +15,47 @@ namespace PinBallBattles
         {
 
         }
-
-        public Vector2 ClosestEdge(Player p)
+        
+        public Vector2 GetPlayerDir(Vector2 playerPos)
         {
-            Vector2 r = new Vector2(p.Position.X, p.Position.Y);
+            Vector2 dir = new Vector2();
 
-            if (p.Position.X < Position.X - Width / 2)
+            if (playerPos.X < Position.X)
+            {
+                dir.X = -1;
+            }
+            else if (playerPos.X > Position.X)
+            {
+                dir.X = 1;
+            }
+            if (playerPos.Y < Position.Y )
+            {
+                dir.X -= 1;
+            }
+            else if (playerPos.Y > Position.Y)
+            {
+                dir.X += 1;
+            }
+            return dir;
+        }
+
+        public Vector2 ClosestEdge(Vector2 playerPos)
+        {
+            Vector2 r = playerPos;
+
+            if (playerPos.X < Position.X - Width / 2)
             {
                 r.X = Position.X - Width / 2;
             }
-            else if (p.Position.X > Position.X + Width / 2)
+            else if (playerPos.X > Position.X + Width / 2)
             {
                 r.X = Position.X + Width / 2;
             }
-            if (p.Position.Y < Position.Y - Height / 2)
+            if (playerPos.Y < Position.Y - Height / 2)
             {
                 r.Y = Position.Y - Height / 2;
             }
-            else if (p.Position.Y > Position.Y + Height / 2)
+            else if (playerPos.Y > Position.Y + Height / 2)
             {
                 r.Y = Position.Y + Height / 2;
             }

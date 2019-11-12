@@ -11,14 +11,14 @@ namespace PinBallBattles
         SpriteBatch spriteBatch;
 
         Player[] players = new Player[2];
-        Brick[] bricks = new Brick[2];
+        Brick[] bricks = new Brick[3];
         
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
 
-            graphics.PreferredBackBufferWidth = 1500;
+            graphics.PreferredBackBufferWidth = 800;
             graphics.PreferredBackBufferHeight = 900;
         }
 
@@ -32,7 +32,7 @@ namespace PinBallBattles
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            Vector2 p0Pos = new Vector2(200, 410);
+            Vector2 p0Pos = new Vector2(200, 400);
             Player p1 = new Player(p0Pos, 60, true);
             p1.createCircleText(GraphicsDevice);
             players[0] = p1;
@@ -42,15 +42,25 @@ namespace PinBallBattles
             p2.createCircleText(GraphicsDevice);
             players[1] = p2;
 
-            Vector2 brick1Pos = new Vector2(15, 450);
-            Brick b1 = new Brick(brick1Pos, 30, 900);
+            LoadWalls();
+
+            Vector2 brick1Pos = new Vector2(100, 400);
+            Brick b1 = new Brick(brick1Pos, 50, 900);
             b1.CreateSquareText(GraphicsDevice);
             bricks[0] = b1;
 
-            Vector2 brickpos = new Vector2(585, 450);
+            Vector2 brickpos = new Vector2(700, 450);
             Brick b = new Brick(brickpos, 30, 900);
             b.CreateSquareText(GraphicsDevice);
             bricks[1] = b;
+        }
+
+        void LoadWalls()
+        {
+            Vector2 RoofPos = new Vector2(400, 20);
+            Brick b1 = new Brick(RoofPos, 600, 80);
+            b1.CreateSquareText(GraphicsDevice);
+            bricks[2] = b1;
         }
 
         protected override void UnloadContent()
@@ -71,10 +81,10 @@ namespace PinBallBattles
 
             base.Update(gameTime);
         }
-        bool wallCol;
+
         private void MovePlayers(GameTime gameTime)
         {
-            float playerToPlayerDistance = ToPlayerDistance(players[0], players[1].Position);
+            float playerToPlayerDistance = players[0].ToPlayerDistance(players[1].Position);
             bool playerToPlayerCollision = PlayerToPlayerCollision
                 (playerToPlayerDistance, players[0]);
 
@@ -90,22 +100,11 @@ namespace PinBallBattles
                     other = players[0];
                 else
                     other = players[1];
-
-                foreach(Brick b in bricks)
-                {
-                    Vector2 t = b.ClosestEdge(p);
-                    float dis = ToPlayerDistance(p, t);
-                    wallCol = PlayerToPlayerCollision(dis, p);
-                }
-                Console.WriteLine(wallCol);
-
+                
                 Vector2 movePlayer = p.PlayerMovementController
-                    (gameTime, playerToPlayerDistance, playerToPlayerCollision, other, graphics);
-                if (!wallCol)
-                {
-                    p.Position += movePlayer;
-
-                }
+                    (gameTime, playerToPlayerDistance, playerToPlayerCollision, other, graphics, bricks);
+                
+                p.Position += movePlayer;
             }
         }
 
@@ -116,49 +115,42 @@ namespace PinBallBattles
             {
                 players[0].MoveState = MovementStates.ShortKnockBack;
                 players[1].MoveState = MovementStates.ShortKnockBack;
-                players[0].SetKnockbackDirection(playDistance, players[1]);
-                players[1].SetKnockbackDirection(playDistance, players[0]);
+                players[0].SetVelocityToPlayer(playDistance, players[1]);
+                players[1].SetVelocityToPlayer(playDistance, players[0]);
             }
             else if (players[0].MoveState == MovementStates.Dash
                 && players[1].MoveState == MovementStates.Normal)
             {
                 players[0].MoveState = MovementStates.ShortKnockBack;
                 players[1].MoveState = MovementStates.LongKnockBack;
-                players[0].SetKnockbackDirection(playDistance, players[1]);
-                players[1].SetKnockbackDirection(playDistance, players[0]);
+                players[0].SetVelocityToPlayer(playDistance, players[1]);
+                players[1].SetVelocityToPlayer(playDistance, players[0]);
             }
             else if (players[0].MoveState == MovementStates.Normal
                 && players[1].MoveState == MovementStates.Dash)
             {
                 players[0].MoveState = MovementStates.LongKnockBack;
                 players[1].MoveState = MovementStates.ShortKnockBack;
-                players[0].SetKnockbackDirection(playDistance, players[1]);
-                players[1].SetKnockbackDirection(playDistance, players[0]);
+                players[0].SetVelocityToPlayer(playDistance, players[1]);
+                players[1].SetVelocityToPlayer(playDistance, players[0]);
             }
             else
             {
-                players[0].MoveState = MovementStates.Normal;
-                players[1].MoveState = MovementStates.Normal;
+                // this happens at normal speed too
+                players[0].MoveState = MovementStates.ShortKnockBack;
+                players[1].MoveState = MovementStates.ShortKnockBack;
+                players[0].SetVelocityToPlayer(playDistance, players[1]);
+                players[1].SetVelocityToPlayer(playDistance, players[0]);
             }
         }
-
+        
         private bool PlayerToPlayerCollision(double dis, Player player)
         {
-            if (dis <= player.Radius / 2)
+            if (dis <= player.Diam)
             {
                 return true;
             }
             return false;
-        }
-
-        private float ToPlayerDistance(Player player, Vector2 test)
-        {
-            float distX = player.Position.X - test.X;
-            float distY = player.Position.Y - test.Y;
-
-            float distance = (float)Math.Sqrt((distX * distX) + (distY * distY));
-
-            return distance;
         }
         
         protected override void Draw(GameTime gameTime)
